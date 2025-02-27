@@ -25,7 +25,7 @@ struct PMApp_MicroControllerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MotionView()
         }
         .modelContainer(sharedModelContainer)
     }
