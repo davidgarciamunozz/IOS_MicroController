@@ -16,9 +16,11 @@ class MotionManager: ObservableObject {
     @Published var accY: Double = 0.0
     @Published var accZ: Double = 0.0
     
-    @Published var gyroX: Double = 0.0
-    @Published var gyroY: Double = 0.0
-    @Published var gyroZ: Double = 0.0
+    @Published var impactScore: Int = 0
+    @Published var impactDetected: Bool = false
+
+    let gravity: Double = 9.81  // Valor de la gravedad en m/s²
+    let impactThreshold: Double = 15.0  // Umbral mínimo para detectar un golpe fuerte
 
     init() {
         startMotionUpdates()
@@ -26,27 +28,34 @@ class MotionManager: ObservableObject {
 
     func startMotionUpdates() {
         if motion.isAccelerometerAvailable {
-            motion.accelerometerUpdateInterval = 0.1
+            motion.accelerometerUpdateInterval = 0.05
             motion.startAccelerometerUpdates()
         }
         
-        if motion.isGyroAvailable {
-            motion.gyroUpdateInterval = 0.1
-            motion.startGyroUpdates()
-        }
-        
-        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
             if let accelerometerData = self.motion.accelerometerData {
-                self.accX = accelerometerData.acceleration.x
-                self.accY = accelerometerData.acceleration.y
-                self.accZ = accelerometerData.acceleration.z
-            }
-            
-            if let gyroData = self.motion.gyroData {
-                self.gyroX = gyroData.rotationRate.x
-                self.gyroY = gyroData.rotationRate.y
-                self.gyroZ = gyroData.rotationRate.z
+                let ax = accelerometerData.acceleration.x * self.gravity
+                let ay = accelerometerData.acceleration.y * self.gravity
+                let az = accelerometerData.acceleration.z * self.gravity
+                
+                self.accX = ax
+                self.accY = ay
+                self.accZ = az
+                
+                let totalAcceleration = sqrt(ax * ax + ay * ay + az * az)
+                
+                if totalAcceleration > self.impactThreshold {
+                    self.impactScore = self.calculateImpactScore(totalAcceleration)
+                    self.impactDetected = true
+                } else {
+                    self.impactDetected = false
+                }
             }
         }
+    }
+
+    private func calculateImpactScore(_ acceleration: Double) -> Int {
+        let normalizedImpact = max(0, acceleration - impactThreshold) / 40.0
+        return min(1000, Int(normalizedImpact * 1000))
     }
 }
